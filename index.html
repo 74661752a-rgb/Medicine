@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>약 복용 체크</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script>window.onerror=function(m,s,l){try{var d=document.createElement("div");d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:99;background:#b91c1c;color:#fff;padding:8px 12px;font:13px sans-serif";d.textContent="오류: "+m+" (줄 "+l+")";(document.body||document.documentElement).appendChild(d);}catch(e){}};</script>
+<style>
+:root{
+  /* layout: one column, sticky progress header, time-slot sections, large tap rows */
+  --bg:#f3f7f6; --surface:#ffffff; --ink:#14302c; --muted:#5d7571; --line:#d6e2df;
+  --accent:#0f7a6b; --accent-ink:#ffffff; --accent-soft:#dcf0ec;
+  --warn:#c2410c; --warn-soft:#fde8dc; --ok:#15803d;
+  --font:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1b19; --surface:#162825; --ink:#e4f1ee; --muted:#93aca7; --line:#2a403c;
+    --accent:#4fd1bd; --accent-ink:#06211d; --accent-soft:#1d3b36;
+    --warn:#fb923c; --warn-soft:#3a2417; --ok:#4ade80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1b19; --surface:#162825; --ink:#e4f1ee; --muted:#93aca7; --line:#2a403c;
+  --accent:#4fd1bd; --accent-ink:#06211d; --accent-soft:#1d3b36;
+  --warn:#fb923c; --warn-soft:#3a2417; --ok:#4ade80;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.phone{position:relative;display:flex;flex-direction:column;height:100%;width:100%;max-width:430px;margin:0 auto;background:var(--bg);overflow:hidden}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.wrap{padding:0 16px 96px}
+/* 웹 화면(PC): 휴대폰 크기 프레임을 가운데에 표시 */
+@media (min-width:600px){
+  body{display:grid;place-items:center;padding:24px;background:#cfdad7}
+  .phone{height:min(844px,calc(100% - 0px));width:390px;border-radius:40px;border:10px solid #101c1a;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+}
+@media (min-width:600px) and (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) body{background:#070f0e}
+}
+:root[data-theme="dark"] body{background:#070f0e}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:16px 0 12px;border-bottom:1px solid var(--line)}
+.datebar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.datebar h1{margin:0;font-size:20px;font-weight:900;text-wrap:balance;text-align:center;flex:1}
+.datebar h1 small{display:block;font-size:13px;font-weight:500;color:var(--muted)}
+.nav{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:20px;line-height:1}
+.nav:disabled{opacity:.35;cursor:default}
+.prog{margin-top:12px}
+.prog-row{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.prog-row span:last-child{color:var(--muted);font-weight:500}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+.todaybtn{margin-top:10px;width:100%;padding:8px;border-radius:10px;border:1px dashed var(--line);background:transparent;color:var(--muted);font-size:14px}
+
+/* slots */
+.slot{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.slot.now{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.slot-h{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--accent-soft)}
+.slot-h h2{margin:0;font-size:17px;font-weight:900;flex:1}
+.slot-h input[type=time]{font:inherit;font-size:15px;font-variant-numeric:tabular-nums;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:4px 6px;min-width:96px}
+.pill{font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--surface);color:var(--muted);white-space:nowrap}
+.pill.late{background:var(--warn-soft);color:var(--warn)}
+.pill.done{background:var(--accent);color:var(--accent-ink)}
+.pill.now{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:14px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;min-height:64px}
+.row:first-of-type{border-top:0}
+.box{flex:none;width:32px;height:32px;border-radius:10px;border:2px solid var(--muted);display:grid;place-items:center;color:transparent;font-weight:900;font-size:18px}
+.row[aria-pressed="true"] .box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;font-size:17px;overflow-wrap:anywhere}
+.row .nm span{display:block;font-size:13px;color:var(--muted)}
+.row[aria-pressed="true"] .nm b{text-decoration:line-through;text-decoration-thickness:2px;color:var(--muted)}
+.empty{padding:16px 14px;color:var(--muted);font-size:14px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:0 6px;border-radius:6px;background:var(--line);color:var(--muted);margin-left:6px;vertical-align:middle}
+
+/* manage */
+h3.sec{margin:28px 0 8px;font-size:15px;color:var(--muted);font-weight:700}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.mrow{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--line)}
+.mrow:first-child{border-top:0}
+.mrow .nm{flex:1;min-width:0}
+.mrow .nm b{display:block;overflow-wrap:anywhere}
+.mrow .nm span{font-size:13px;color:var(--muted)}
+.del{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 12px;font-size:14px;min-height:40px}
+.del.arm{background:var(--warn);border-color:var(--warn);color:#fff;font-weight:700}
+.fab{position:absolute;left:16px;right:16px;bottom:max(16px,env(safe-area-inset-bottom));padding:15px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-weight:900;font-size:17px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.note{margin:24px 0 0;font-size:12.5px;color:var(--muted);text-wrap:balance}
+.sync{font-size:12px;color:var(--muted);margin-top:6px}
+
+/* sheet */
+.veil{position:absolute;inset:0;background:rgba(0,0,0,.5);display:none;z-index:20;align-items:flex-end;justify-content:center}
+.veil.open{display:flex}
+.sheet{background:var(--surface);width:100%;border-radius:20px 20px 0 0;padding:20px 16px max(20px,env(safe-area-inset-bottom));max-height:92%;overflow:auto}
+.sheet h2{margin:0 0 14px;font-size:19px;font-weight:900}
+label.f{display:block;font-size:14px;font-weight:700;margin:12px 0 6px}
+.in{width:100%;font:inherit;font-size:16px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:10px 14px;border-radius:99px;border:1px solid var(--line);background:var(--bg);font-size:15px;min-height:44px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.err{color:var(--warn);font-size:15px;font-weight:700;margin-top:8px}
+.err:not(:empty){background:var(--warn-soft);padding:10px 12px;border-radius:10px}
+.acts{display:flex;gap:10px;margin-top:12px}
+.acts button{flex:1;padding:14px;border-radius:12px;border:1px solid var(--line);background:transparent;font-weight:700;font-size:16px}
+.acts .go{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+@media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+
+/* 처방전 사진 */
+.rx{padding:12px}
+.rx-actions{display:flex;gap:10px}
+.rxbtn{flex:1;padding:14px 8px;border-radius:12px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);font-weight:700;font-size:16px;min-height:48px}
+.rx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.rx-grid:empty{display:none}
+.thumb{position:relative;padding:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;aspect-ratio:3/4;background:var(--bg)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb span{position:absolute;left:0;right:0;bottom:0;padding:2px 6px;font-size:12px;font-weight:700;background:rgba(0,0,0,.55);color:#fff;text-align:left}
+.vimg{display:block;width:100%;max-height:60vh;object-fit:contain;border-radius:12px;background:var(--bg)}
+.vmeta{margin-top:8px;font-size:13px;color:var(--muted)}
+.acts .dng.arm{background:var(--warn);border-color:var(--warn);color:#fff}
+#rxErr:empty{display:none}
+
+/* 처방전 자동 읽기 */
+.readbtn{width:100%;margin-top:12px;padding:14px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:900;font-size:16px;min-height:48px}
+.readbtn:disabled{opacity:.6;cursor:default}
+.readnote{margin:8px 0 0;font-size:13px;color:var(--muted)}
+#vErr:empty,#rvErr:empty{display:none}
+.rvitem{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;background:var(--bg)}
+.rvitem.off{opacity:.55}
+.rvtop{display:flex;align-items:center;gap:10px}
+.rvtop input[type=checkbox]{width:24px;height:24px;flex:none;accent-color:var(--accent)}
+.rvitem .in{margin-top:8px}
+.rvtop .in{margin-top:0}
+.rvitem .chips{margin-top:10px}
+.dupe{font-size:12px;color:var(--warn);font-weight:700;margin-top:6px}
+
+/* v2 레이아웃: 휴대폰은 일반 문서 스크롤, PC는 휴대폰 프레임 */
+html,body{height:auto;min-height:100%}
+.phone{height:auto;min-height:100vh;overflow:visible;display:block}
+.scroll{overflow:visible;flex:none}
+.fab{position:fixed;left:50%;right:auto;transform:translateX(-50%);width:min(398px,calc(100% - 32px));z-index:10}
+.veil{position:fixed;top:0;left:0;right:0;bottom:0}
+.sheet{max-width:430px}
+button,.chip,.row,.thumb{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+@media (min-width:600px){
+  html,body{height:100%}
+  .phone{height:min(844px,calc(100vh - 48px));min-height:0;overflow:hidden;transform:translateZ(0);display:flex;flex-direction:column}
+  .scroll{flex:1;overflow-y:auto}
+  .fab{left:16px;right:16px;width:auto;transform:none}
+}
+
+/* 사진 버튼: 보이지 않는 파일 선택칸을 버튼 위에 덮어 휴대폰에서도 바로 열리게 함 */
+.rxbtn{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center}
+.rxbtn input[type=file]{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.rxbtn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+
+/* 컴팩트 글자 크기·간격 */
+body{font-size:14px;line-height:1.35;letter-spacing:-0.02em}
+.top{padding:12px 0 10px}
+.datebar h1{font-size:17px;font-weight:700}
+.datebar h1 small{font-size:12px}
+.nav{width:38px;height:38px;font-size:18px;border-radius:10px}
+.prog{margin-top:8px}
+.prog-row{font-size:13px}
+.bar{height:8px}
+.todaybtn{font-size:13px;padding:6px}
+.slot{margin-top:12px;border-radius:14px}
+.slot-h{padding:9px 12px;gap:8px}
+.slot-h h2{font-size:15px;font-weight:700}
+.slot-h input[type=time]{font-size:14px;min-width:88px;padding:3px 5px}
+.pill{font-size:11px;padding:1px 8px}
+.row{padding:10px 12px;min-height:52px;gap:10px}
+.box{width:26px;height:26px;border-radius:8px;font-size:15px}
+.row .nm b{font-size:15px;font-weight:700}
+.row .nm span{font-size:12px}
+.empty{font-size:13px;padding:12px}
+h3.sec{font-size:13px;margin:20px 0 6px}
+.mrow{padding:9px 12px}
+.mrow .nm b{font-size:14px}
+.mrow .nm span{font-size:12px}
+.del{font-size:13px;padding:6px 10px;min-height:34px}
+.fab{font-size:15px;padding:12px;font-weight:700}
+.note{font-size:11.5px;margin-top:18px}
+.readnote{font-size:12px}
+.sheet h2{font-size:17px;font-weight:700}
+label.f{font-size:13px;margin:10px 0 4px}
+.in{font-size:16px;padding:9px 10px}
+.chip{font-size:14px;padding:8px 12px;min-height:40px}
+.acts button{font-size:15px;padding:11px}
+.rxbtn{font-size:14px;min-height:42px;padding:9px 6px}
+.readbtn{font-size:15px;min-height:44px;padding:11px;font-weight:700}
+.err,.err:not(:empty){font-size:13px}
+.tag{font-size:10px}
+.wrap{padding-bottom:80px}
+
+/* 하단 탭 메뉴 */
+body[data-active] [data-tab]{display:none}
+body[data-active="home"] [data-tab="home"],
+body[data-active="meds"] [data-tab="meds"],
+body[data-active="log"] [data-tab="log"],
+body[data-active="more"] [data-tab="more"]{display:block}
+.tabpage{padding-top:4px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;z-index:15;display:flex;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:7px 2px 6px;border:0;background:transparent;color:var(--muted);font-size:11px;font-weight:500;min-height:56px}
+.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--accent);font-weight:700}
+.fab{bottom:calc(68px + env(safe-area-inset-bottom))}
+body[data-active="log"] .fab,body[data-active="more"] .fab{display:none}
+.wrap{padding-bottom:150px}
+.lrow{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:0;border-top:1px solid var(--line);background:transparent;text-align:left;font-size:14px}
+.lrow:first-child{border-top:0}
+.ld{width:96px;font-weight:700}
+.lbar{flex:1;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.lbar i{display:block;height:100%;background:var(--accent)}
+.lc{width:44px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.info{padding:10px 14px}
+.info ul{margin:0;padding-left:18px}
+.info li{margin:5px 0;font-size:13px}
+
+.pill.skip{background:var(--line);color:var(--muted)}
+.row.skip .box{color:var(--muted);border-color:var(--muted)}
+.row.skip .nm b{color:var(--muted)}
+
+/* 위아래 간격 통일: 탭 메뉴는 내용이 정중앙, 약 추가 버튼은 좌우 여백(16px)과 같은 간격으로 탭 위에 배치 */
+:root{--tabh:58px}
+.tabbar{padding-bottom:env(safe-area-inset-bottom)}
+.tab{height:var(--tabh);min-height:0;padding:0 2px;gap:3px;justify-content:center}
+.tab span{line-height:1.2}
+.fab{bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom))}
+
+.tabbar{border-top:0;box-shadow:0 -1px 0 var(--line)}
+
+/* 약 추가 버튼: 목록 바로 아래(위 간격 16px), 목록이 길면 탭 메뉴 위에 고정 */
+.fab{display:none}
+.fabrow{position:sticky;bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom));margin-top:16px;z-index:10}
+.addbtn{display:block;width:100%;padding:12px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.wrap{padding-bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom))}
+
+/* 더 많은 정보 링크 */
+.linkcard{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid var(--accent);border-radius:14px;background:var(--accent-soft);color:var(--ink);text-decoration:none}
+.linkcard .lk b{display:block;font-size:15px;font-weight:700}
+.linkcard .lk small{display:block;font-size:12px;color:var(--muted)}
+.linkcard svg{width:22px;height:22px;flex:none;stroke:var(--accent);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.linkcard:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.drug{padding:0;overflow:hidden}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;font-size:15px;font-weight:700;border-left:4px solid var(--accent)}
+.drow{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-top:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14px}
+.drow:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.dhead svg,.drow svg{width:18px;height:18px;flex:none;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.dd summary{list-style:none;cursor:pointer}
+.dd summary::-webkit-details-marker{display:none}
+.dd[open] summary svg{transform:rotate(90deg)}
+.guide{padding:4px 14px 14px;border-top:1px solid var(--line);font-size:13px;line-height:1.55}
+.gname{padding:8px 0}
+.gname b{font-size:15px}
+.gname small{margin-left:6px;color:var(--muted)}
+.guide dl{margin:0;display:grid;grid-template-columns:72px 1fr;gap:4px 8px}
+.guide dt{color:var(--muted)}
+.guide dd{margin:0}
+.gtags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.gtags span{padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--ink);font-size:12px}
+.guide h4{margin:12px 0 4px;padding-left:8px;border-left:3px solid var(--accent);font-size:13.5px}
+.guide p{margin:0}
+.guide ul{margin:0;padding-left:18px}
+.gmore{display:inline-block;margin-top:10px;color:var(--accent);font-size:12.5px}
+.g2{margin-top:6px;padding-top:10px}
+.gnote{margin-top:8px!important;font-size:12px;color:var(--muted)}
+
+.mck{width:20px;height:20px;flex:none;accent-color:var(--accent);margin:0}
+.mv{display:flex;flex-direction:column;gap:2px;flex:none}
+.mv button{width:30px;height:20px;padding:0;border:1px solid var(--line);background:transparent;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.mv button:disabled{opacity:.3}
+.mv svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.mrow{gap:8px}
+
+.movebar{margin-top:10px;padding:12px;border:1px solid var(--accent);border-radius:14px;background:var(--accent-soft)}
+.movebar[hidden]{display:none}
+.mbt{font-size:13px;font-weight:700;margin-bottom:8px}
+.mbs{display:flex;flex-wrap:wrap;gap:6px}
+.mbs button{padding:8px 14px;border-radius:999px;border:1px solid var(--accent);background:var(--card,#fff);color:var(--ink);font-size:14px;min-height:36px}
+.mbs .mbc{border-color:var(--line);color:var(--muted)}
+
+.mvb{display:flex;align-items:center;gap:3px;border:1px solid var(--line);background:transparent;border-radius:10px;padding:6px 8px;font-size:13px;min-height:34px;color:var(--ink);flex:none}
+.mvb svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mvsub{font-size:13px;color:var(--muted);margin:-6px 0 12px}
+.mvgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.mvgrid button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:14px;font-size:16px;font-weight:700;color:var(--ink)}
+.mvgrid button small{font-size:12px;font-weight:400;color:var(--muted)}
+.mvgrid button.cur{background:var(--accent);color:#fff}
+.mvgrid button.cur small{color:#fff}
+#mvVeil .acts{display:flex}
+#mvVeil .acts button{flex:1}
+
+</style>
+</head>
+<body data-active="home">
+<div class="phone">
+<div class="scroll">
+<div class="wrap">
+  <header class="top" data-tab="home">
+    <div class="datebar">
+      <button class="nav" id="prev" aria-label="전날">‹</button>
+      <h1 id="title"></h1>
+      <button class="nav" id="next" aria-label="다음 날">›</button>
+    </div>
+    <div class="prog">
+      <div class="prog-row"><span id="progText"></span><span id="progSub"></span></div>
+      <div class="bar" role="progressbar" aria-label="복용 진행률" id="bar"><i id="barFill" style="width:0"></i></div>
+    </div>
+    <button class="todaybtn" id="goToday" hidden>오늘로 돌아가기</button>
+  </header>
+
+  <main id="slots" data-tab="home"></main>
+  <div class="fabrow" data-tab="home"><button type="button" class="addbtn">약 추가</button></div>
+
+<div data-tab="meds" class="tabpage">
+  <h3 class="sec">내 약 목록</h3>
+  <div class="card" id="medList"></div>
+  <div class="fabrow"><button type="button" class="addbtn">약 추가</button></div>
+  <h3 class="sec">처방전 사진</h3>
+  <div class="card rx">
+    <div class="rx-actions">
+      <div class="rxbtn"><span>사진 찍기</span><input type="file" id="rxCamIn" accept="image/*" capture="environment" aria-label="사진 찍기"></div>
+      <div class="rxbtn"><span>앨범에서 선택</span><input type="file" id="rxAlbIn" accept="image/*" multiple aria-label="앨범에서 사진 선택"></div>
+    </div>
+    <p class="readnote">Claude 앱 안에서 사진 선택창이 열리지 않으면, 같은 링크를 휴대폰의 크롬·사파리 등 인터넷 앱에서 열어 사용하세요.</p>
+    <div class="rx-grid" id="rxGrid"></div>
+    <div class="err" id="rxErr" role="alert"></div>
+  </div>
+</div>
+
+  <div data-tab="log" class="tabpage">
+    <h3 class="sec">최근 7일 복용 기록</h3>
+    <div class="card" id="logList"></div>
+    <p class="note">현재 등록된 약 기준입니다. 날짜를 누르면 홈에서 그날 기록을 볼 수 있습니다.</p>
+  </div>
+
+  <div data-tab="more" class="tabpage">
+    <h3 class="sec">더 많은 정보</h3>
+    <div class="card drug">
+      <div class="dhead"><span>의약품정보</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></div>
+      <details class="dd">
+        <summary class="drow"><span>제품정보</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
+        <div class="guide">
+          <div class="gname"><b>퓨어 코큐텐 코엔자임Q10 미니캡슐</b><small>비타민마을</small></div>
+          <dl>
+            <dt>분류</dt><dd>건강기능식품</dd>
+            <dt>내용량</dt><dd>12g (400mg x 30캡슐)</dd>
+            <dt>1일 섭취량 당</dt><dd>코엔자임Q10 100mg</dd>
+            <dt>캡슐</dt><dd>식물성 캡슐 (소·돼지·생선 유래 젤라틴 미사용)</dd>
+            <dt>포장</dt><dd>개별 PTP 포장</dd>
+          </dl>
+          <div class="gtags"><span>건강기능식품</span><span>GMP</span><span>식물성 캡슐</span></div>
+          <h4>포장 표시 문구</h4>
+          <ul>
+            <li>소화, 흡수에 용이한 식물성 캡슐</li>
+            <li>1일 섭취량 코큐텐 최대치 함유</li>
+            <li>혈압·항산화 케어 관리</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>웰벳엑스 베르베린 1000mg</b><small>Natural Factors</small></div>
+          <dl>
+            <dt>분류</dt><dd>보충제 (Dietary Supplement)</dd>
+            <dt>내용량</dt><dd>식물성 캡슐 120정</dd>
+            <dt>1회 제공량</dt><dd>캡슐 2정 (용기당 60회)</dd>
+            <dt>성분 / 함량</dt><dd>베르베린HCl (Berberis vulgaris 추출물, 뿌리) 1,000mg</dd>
+          </dl>
+          <div class="gtags"><span>채식주의자/비건에 적합</span><span>우수한 품질</span><span>ISURA 인증</span></div>
+          <h4>제품소개</h4>
+          <p>베르베린은 매자나무, 골든실, 오레곤포도 등 다양한 식물에서 발견되는 천연 식물성 화합물입니다.</p>
+          <ul>
+            <li>심혈관계 건강 강화</li>
+            <li>장 건강 개선</li>
+            <li>친환경 매자나무 원료 사용</li>
+            <li>ISURA 인증: 독립 기관 검증, 오염 물질 800개 이상 검사 완료</li>
+            <li>유전자 변형 성분 무함유, 클린 인증</li>
+          </ul>
+          <p class="gnote">하루 영양소 기준치는 설정되지 않았습니다. 위 내용은 판매 페이지의 표시 내용입니다.</p>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>알래스카 알티지 오메가 에센스 1000</b><small>담백하루</small></div>
+          <dl>
+            <dt>식품유형</dt><dd>건강기능식품</dd>
+            <dt>용량</dt><dd>30캡슐 (1,252mg/캡슐, 총 37.56g)</dd>
+            <dt>섭취량·방법</dt><dd>1일 1회, 1회 1캡슐을 충분한 물과 함께 섭취</dd>
+            <dt>원료</dt><dd>EPA 및 DHA 함유 유지[정제어유, d-토코페롤(혼합형/미국산)], 비타민D3혼합제제(비타민D3, 중쇄중성지방, 비타민E)</dd>
+            <dt>캡슐기제</dt><dd>젤라틴(돈피), 폴리글리시톨시럽, 글리세린, 에틸바닐린 (돼지고기 함유)</dd>
+          </dl>
+          <div class="gtags"><span>건강기능식품</span><span>돼지고기 함유</span><span>비타민 D 600 IU</span></div>
+          <h4>영양정보 (1캡슐 1,252mg 기준)</h4>
+          <ul>
+            <li>열량 10kcal, 탄수화물 0g, 단백질 0g</li>
+            <li>지방 1g (2%), 나트륨 0mg</li>
+            <li>EPA와 DHA의 합 1,000mg</li>
+            <li>비타민D 15μg (150%)</li>
+          </ul>
+          <p class="gnote">%는 1일 영양성분기준치에 대한 비율입니다.</p>
+          <h4>기능성 표시</h4>
+          <ul>
+            <li>[EPA 및 DHA] 혈중 중성지질 개선, 혈행개선, 기억력 개선, 건조한 눈을 개선하여 눈 건강에 도움을 줄 수 있음</li>
+            <li>[비타민D] 칼슘과 인이 흡수되고 이용되는데 필요, 뼈의 형성과 유지에 필요, 골다공증발생 위험 감소에 도움을 줌</li>
+          </ul>
+          <h4>섭취 시 주의사항</h4>
+          <ul>
+            <li>의약품(항응고제, 항혈소판제, 혈압강하제 등) 복용 시 전문가와 상담하세요.</li>
+            <li>개인에 따라 피부 관련 이상반응이 발생할 수 있습니다.</li>
+            <li>이상사례 발생 시 섭취를 중단하고 전문가와 상담하세요.</li>
+            <li>고칼슘혈증이 있거나 의약품 복용 시 전문가와 상담하세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>혈당케어 바나바잎 추출물</b><small>GNM</small></div>
+          <dl>
+            <dt>식품유형</dt><dd>건강기능식품</dd>
+            <dt>내용량</dt><dd>150mg x 60캡슐 (9g)</dd>
+            <dt>섭취량·방법</dt><dd>1일 1회, 1회 1캡슐을 물과 함께 섭취</dd>
+            <dt>원료</dt><dd>건조효모(크롬 함유/에스토니아산), 아셀렌산나트륨혼합제제, 바나바잎추출물분말(인도산), 비타민B1염산염, 비타민B2, 대두유(외국산: 아르헨티나, 미국, 브라질 등), d-토코페롤(혼합형), 규소수지, 밀납, 대두레시틴, 여주추출분말, 호로파종자추출물분말, 당귀추출분말, 마늘추출분말, 가시오갈피추출물분말, 난소화성말토덱스트린</dd>
+            <dt>캡슐기제</dt><dd>젤라틴(우피), 정제수, 글리세린, 락토소, 안나토색소 (대두, 쇠고기 함유)</dd>
+          </dl>
+          <div class="gtags"><span>건강기능식품</span><span>대두 함유</span><span>쇠고기 함유</span></div>
+          <h4>주원료 (1일 1캡슐 기준)</h4>
+          <ul>
+            <li>바나바잎 추출물 6.5mg (코로솔산으로서 1.3mg)</li>
+            <li>셀렌 55μg (1일 영양성분 기준치 100%)</li>
+            <li>크롬 30μg (100%)</li>
+            <li>비타민B1 1.2mg (100%)</li>
+            <li>비타민B2 1.4mg (100%)</li>
+          </ul>
+          <h4>기능성 표시</h4>
+          <ul>
+            <li>식후 혈당상승 억제에 도움을 줄 수 있음</li>
+            <li>셀렌: 유해산소로부터 세포를 보호하는데 필요</li>
+            <li>크롬: 체내 탄수화물, 지방, 단백질 대사에 관여</li>
+            <li>비타민B1: 탄수화물과 에너지 대사에 필요</li>
+            <li>비타민B2: 체내 에너지 생성에 필요</li>
+          </ul>
+          <h4>섭취 시 주의사항</h4>
+          <ul>
+            <li>소비기한을 확인하시고, 섭취량 및 섭취방법을 준수하세요.</li>
+            <li>특이체질, 알레르기 체질의 경우 간혹 과민반응이 나타날 수 있으므로 원료를 확인한 후 섭취하세요.</li>
+            <li>질병 치료 중인 분은 섭취에 주의하세요.</li>
+            <li>당뇨병이 있는 경우 섭취 전 전문가와 상담하세요.</li>
+            <li>이상사례 발생 시 섭취를 중단하고 전문가와 상담하세요.</li>
+            <li>어린이, 임산부 및 수유부는 섭취를 피하세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>고흡수 마그네슘 라이시네이트 글리시네이트</b><small>Doctor's Best</small></div>
+          <dl>
+            <dt>분류</dt><dd>보충제 (Dietary Supplement)</dd>
+            <dt>내용량</dt><dd>식물성 캡슐 120정</dd>
+            <dt>1회 제공량</dt><dd>캡슐 2정 (용기당 60회)</dd>
+            <dt>성분 / 함량</dt><dd>마그네슘 105mg (마그네슘 라이시네이트 글리시네이트 킬레이트 1,050mg에서, Albion®) · 1일 기준치 25%</dd>
+            <dt>기타 원료</dt><dd>히프로멜로스(식물성 캡슐), 스테아린산칼슘, 미결정셀룰로스, 이산화규소</dd>
+          </dl>
+          <div class="gtags"><span>100% 킬레이트</span><span>식물성 캡슐</span></div>
+          <h4>섭취 방법</h4>
+          <ul>
+            <li>성인은 1일 2캡슐을 섭취하거나, 영양 전문가의 안내에 따르세요.</li>
+            <li>서늘하고 건조한 곳에 보관하세요.</li>
+          </ul>
+          <p class="gnote">제품 라벨(영문)을 옮긴 내용입니다. 앞면에는 "Muscle Relaxation &amp; Sleep Support"라고 적혀 있고, 효과를 확인한 내용은 아닙니다.</p>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>인사돌플러스정</b><small>동국제약</small></div>
+          <dl>
+            <dt>구분</dt><dd>일반의약품</dd>
+            <dt>유효성분</dt><dd>1정 중 옥수수불검화정량추출물(생규) 35.0mg(총 스테롤로서 7mg), 후박75%에탄올연조엑스(5→1)(별규) 70.0mg</dd>
+            <dt>첨가제</dt><dd>타르색소: 황색4호, 황색5호, 청색</dd>
+            <dt>기타첨가제</dt><dd>미결정셀룰로오스, 스테아르산마그네슘, 아크릴이즈MP한색 93O18508, 오파그로스2 클리어97W19196, 오파드라이AMB주황색80W630015, 오파드라이흰색OY-C-7000A, 콜로이드성이산화규소, 크로스포비돈, 포비돈</dd>
+            <dt>성상</dt><dd>주황색의 원형 필름코팅정</dd>
+            <dt>포장단위</dt><dd>100정(PTP), 270정(병)</dd>
+            <dt>저장방법</dt><dd>밀폐용기, 실온보관(1~30°C)</dd>
+          </dl>
+          <div class="gtags"><span>일반의약품</span><span>먹는 잇몸약</span></div>
+          <h4>효능·효과</h4>
+          <p>치주치료 후 치은염(잇몸염), 경·중등도 치주염의 보조치료</p>
+          <h4>용량·용법</h4>
+          <ul>
+            <li>초기량: 1회 2정, 1일 3회 식전에 경구(복용) 투여하세요.</li>
+            <li>유지량: 1회 1정, 1일 3회 식전에 경구(복용) 투여하세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>나인나인정</b></div>
+          <dl>
+            <dt>성상</dt><dd>흐린 빨간 갈색의 타원형 필름코팅정</dd>
+            <dt>저장방법</dt><dd>기밀용기, 실온(1~30°C) 보관</dd>
+          </dl>
+          <div class="gtags"><span>28성분 종합비타민</span><span>하루 한알</span><span>100정</span></div>
+          <h4>성분 / 함량</h4>
+          <ul>
+            <li>무수인산수소칼슘 421.54mg</li>
+            <li>시아노코발라민1000배산 6mg</li>
+            <li>염화크롬수화물 0.102mg</li>
+            <li>요오드화칼륨 0.098mg (칼륨으로서 23μg, 요오드로서 75μg)</li>
+            <li>몰리브덴산나트륨 0.051mg</li>
+            <li>폴산 0.4mg</li>
+            <li>레티놀아세테이트 1.8mg</li>
+            <li>피토나디온5% 1.95mg</li>
+            <li>리보플라빈 2.4mg</li>
+            <li>베타카로틴20%과립 3.6mg</li>
+            <li>티아민질산염 2.775mg</li>
+            <li>피리독신염산염 4.02mg</li>
+            <li>비오틴 0.06mg</li>
+            <li>콜레칼시페롤과립 7.5mg</li>
+            <li>황산제이구리수화물 1.76mg</li>
+            <li>황산망간 7.69mg</li>
+            <li>판토텐산칼슘 9.813mg</li>
+            <li>산화아연 9.33mg</li>
+            <li>니코틴산아미드 27mg</li>
+            <li>토코페롤아세테이트2배산 60mg</li>
+            <li>셀레늄가루0.1% 29.5mg</li>
+            <li>푸마르산철 54.76mg (철로서 18mg)</li>
+            <li>아스코르브산과립97% 61.85mg (아스코르빈산으로서 60mg)</li>
+            <li>산화마그네슘 82.92mg</li>
+            <li>황산칼륨 89.15mg</li>
+            <li>우르소데옥시콜산 10mg</li>
+            <li>콜린타르타르산염 10mg</li>
+            <li>오로트산수화물 10mg</li>
+          </ul>
+          <h4>KPIC 약효분류 (성분별)</h4>
+          <ul>
+            <li><b>무수인산수소칼슘</b> 칼슘(Ca) <small>(대량무기질)</small></li>
+            <li><b>아스코르브산과립97%</b> 비타민C 제제 <small>(수용성 비타민)</small></li>
+            <li><b>비오틴</b> 비타민B7 <small>(수용성 비타민)</small></li>
+            <li><b>판토텐산칼슘</b> 비타민B5 <small>(수용성 비타민)</small></li>
+            <li><b>콜레칼시페롤과립</b> 비타민D3 제제 <small>(지용성 비타민)</small></li>
+            <li><b>콜린타르타르산염</b> 기타 비타민B <small>(수용성 비타민)</small></li>
+            <li><b>염화크롬수화물</b> 크롬(Cr) <small>(미량무기질)</small></li>
+            <li><b>황산제이구리수화물</b> 구리(Cu) <small>(미량무기질)</small></li>
+            <li><b>시아노코발라민1000배산</b> 비타민B12 보충 <small>(조혈 비타민제)</small></li>
+            <li><b>푸마르산철</b> 제1철(Ferrous) <small>(철분제제, 빈혈 치료제)</small></li>
+            <li><b>폴산</b> 엽산 보충 <small>(조혈 비타민제)</small></li>
+            <li><b>산화마그네슘</b> 마그네슘(Mg) <small>(대량무기질)</small></li>
+            <li><b>황산망간</b> 망간(Mn) <small>(미량무기질)</small></li>
+            <li><b>니코틴산아미드</b> 비타민B3 <small>(수용성 비타민)</small></li>
+            <li><b>피토나디온5%</b> 지혈 및 비타민K 공급 <small>(지용성 비타민)</small></li>
+            <li><b>피리독신염산염</b> 비타민B6 <small>(수용성 비타민)</small></li>
+            <li><b>레티놀아세테이트</b> 비타민A 제제 <small>(지용성 비타민)</small></li>
+            <li><b>리보플라빈</b> 비타민B2 <small>(수용성 비타민)</small></li>
+            <li><b>셀레늄가루0.1%</b> 셀레늄(Se) <small>(미량무기질)</small></li>
+            <li><b>몰리브덴산나트륨</b> 몰리브덴(Mo) <small>(미량무기질)</small></li>
+            <li><b>티아민질산염</b> 비타민B1 <small>(수용성 비타민)</small></li>
+            <li><b>토코페롤아세테이트2배산</b> 비타민E 제제 <small>(지용성 비타민)</small></li>
+            <li><b>우르소데옥시콜산</b> 담석용해제 <small>(간장·담낭·췌장질환 치료)</small></li>
+            <li><b>산화아연</b> 아연(Zn) <small>(미량무기질)</small></li>
+            <li><b>베타카로틴20%과립</b> 비타민A 제제 <small>(지용성 비타민)</small></li>
+          </ul>
+          <p class="gnote">비타민 및 영양제류, 소화기계질환, 혈액 및 조혈기관 질환 분류입니다. 요오드화칼륨, 황산칼륨, 오로트산수화물은 사진에 분류가 보이지 않아 넣지 않았습니다.</p>
+          <a class="gmore" href="https://health.kr/searchDrug" target="_blank" rel="noopener noreferrer">제품정보 더 보기 (KPIC)</a>
+        </div>
+      </details>
+      <a class="drow" href="https://health.kr/searchIngredient/KPICeffect_result.asp?kpic_atc=K" target="_blank" rel="noopener noreferrer"><span>성분정보</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+      <details class="dd">
+        <summary class="drow"><span>복약정보</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></summary>
+        <div class="guide">
+          <div class="gname"><b>아나탄정16mg</b><small>Anatan Tab. 16mg</small></div>
+          <dl>
+            <dt>성분 / 함량</dt><dd>칸데사르탄실렉세틸 (Candesartan Cilexetil) 16mg</dd>
+            <dt>성상</dt><dd>흰색의 원형 정제</dd>
+            <dt>저장방법</dt><dd>기밀용기, 실온보관(1-30°C)</dd>
+          </dl>
+          <div class="gtags"><span>임부·수유부 X</span><span>생활요법을 같이 하세요</span><span>천천히 일어나세요</span><span>먹는 약</span></div>
+          <h4>이 약은 무슨 약입니까?</h4>
+          <p>혈관확장작용으로 혈압을 낮추고, 심장부담을 감소시켜 심부전 증상을 완화시켜주는 약입니다.</p>
+          <h4>이 약은 어떻게 복용합니까?</h4>
+          <ul>
+            <li>증상이 개선되더라도 전문가와 상의없이 투약을 중단하지 마세요.</li>
+            <li>장시간 눕거나 앉은 자세에서 일어나는 경우 천천히 일어나세요.</li>
+            <li>눈꺼풀, 입술, 입 안에 부종이 나타나거나 호흡곤란을 느끼면 전문가와 상의하세요.</li>
+            <li>임산부, 수유부는 투여하지 마세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>리피딜슈프라정</b><small>Lipidil supra Tab.</small></div>
+          <dl>
+            <dt>성분 / 함량</dt><dd>페노피브레이트 (Fenofibrate) 160mg</dd>
+            <dt>성상</dt><dd>흰색, 장방형의 제어 방출성 필름코팅정. 한면에는 "160", 다른 한면에는 Fournier 로고가 새겨져 있다</dd>
+            <dt>저장방법</dt><dd>기밀용기, 실온(1-30°C)보관</dd>
+          </dl>
+          <div class="gtags"><span>근육통이 생기면 알리세요</span><span>생활요법을 같이 하세요</span><span>먹는 약</span><span>흡연·알코올 X</span><span>식후 즉시 복용하세요</span></div>
+          <h4>이 약은 무슨 약입니까?</h4>
+          <p>지단백 지질분해효소의 작용을 활발하게 하여 중성지방과 콜레스테롤을 감소시키는 약입니다.</p>
+          <h4>이 약은 어떻게 복용합니까?</h4>
+          <ul>
+            <li>흡수율을 높이기 위하여 식사 직후에 투여하세요.</li>
+            <li>황달 등 간기능 이상징후가 나타날 경우에는 전문가와 상의하세요.</li>
+            <li>투여 후 때때로 근육통이 나타날 수 있어요. 증상이 심할 경우 전문가와 상의하세요.</li>
+            <li>식이요법, 운동요법, 금연, 금주 등 철저한 자기 관리가 중요해요.</li>
+            <li>통풍 환자의 경우 전문가에게 미리 알리세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>그로모정5mg</b></div>
+          <dl>
+            <dt>성분 / 함량</dt><dd>피나스테리드 (Finasteride) 5mg</dd>
+            <dt>성상</dt><dd>청색의 원형 필름코팅정</dd>
+            <dt>저장방법</dt><dd>차광기밀용기, 실온보관(1-30°C)</dd>
+          </dl>
+          <div class="gtags"><span>임신부는 만지지 마세요</span><span>여성은 만지지 마세요</span><span>헌혈하지 마세요</span><span>먹는 약</span><span>1일 1회</span></div>
+          <h4>이 약은 무슨 약입니까?</h4>
+          <p>전립선의 성장을 억제하여 전립선비대로 인한 배뇨장애를 개선시키는 약입니다.</p>
+          <h4>이 약은 어떻게 복용합니까?</h4>
+          <ul>
+            <li>임부 및 가임기 여성은 이 약의 부서지거나 깨진 조각을 만지지 않도록 주의하세요.</li>
+            <li>소아 및 여성에게 투여하지 마세요.</li>
+            <li>1일 1회 투여하세요.</li>
+            <li>남성에서 성기능 이상증상이 나타날 경우에는 전문가와 상의하세요.</li>
+            <li>이 약의 투여기간 및 투여 중지 후 최소 1개월까지는 헌혈하지 마세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>현대미녹시딜정2.5mg</b></div>
+          <dl>
+            <dt>성분 / 함량</dt><dd>미녹시딜 (Minoxidil) 2.5mg</dd>
+            <dt>성상</dt><dd>백색의 원형 정제</dd>
+            <dt>저장방법</dt><dd>기밀용기, 실온(1~30°C)보관</dd>
+          </dl>
+          <div class="gtags"><span>생활요법을 같이 하세요</span><span>위장장애가 나타날 수 있어요</span><span>먹는 약</span></div>
+          <h4>이 약은 무슨 약입니까?</h4>
+          <p>혈관을 확장하여 말초혈관저항을 감소시킴으로써 혈압 상승을 억제하는 약입니다.</p>
+          <h4>이 약은 어떻게 복용합니까?</h4>
+          <ul>
+            <li>체모증가로 인해 다모증이 나타날 수 있어요.</li>
+            <li>맥박 속도가 현저히 달라지거나 불규칙해지면 전문가와 상의하세요.</li>
+            <li>소염진통제와 병용하기 전에는 반드시 전문가와 상의하세요.</li>
+            <li>위장장애가 나타날 수 있어요. 증상이 심하면 전문가와 상의하세요.</li>
+          </ul>
+        </div>
+        <div class="guide g2">
+          <div class="gname"><b>다이크로짇정</b></div>
+          <dl>
+            <dt>성분 / 함량</dt><dd>히드로클로로티아지드 (Hydrochlorothiazide) 25mg</dd>
+            <dt>성상</dt><dd>주황색의 원형 정제</dd>
+            <dt>저장방법</dt><dd>실온(1 ~ 30°C), 건조, 밀폐용기</dd>
+          </dl>
+          <div class="gtags"><span>자외선을 피하세요</span><span>천천히 일어나세요</span><span>위장장애가 나타날 수 있어요</span><span>먹는 약</span></div>
+          <h4>이 약은 무슨 약입니까?</h4>
+          <p>신장에서 나트륨 및 수분의 재흡수를 억제하여 혈압을 감소시키고 부종을 치료하는 약입니다.</p>
+          <h4>이 약은 어떻게 복용합니까?</h4>
+          <ul>
+            <li>투여초기 소변량 및 소변 횟수가 일시적으로 증가할 수 있어요.</li>
+            <li>가능한 오전 중에 투여하는 것이 좋으며, 늦은 저녁에 투여하는 것은 피하세요.</li>
+            <li>위장장애가 나타날 수 있어요. 증상이 심하면 전문가와 상의하세요.</li>
+            <li>장시간 눕거나 앉은 자세에서 일어나는 경우 천천히 일어나세요.</li>
+            <li>설파제에 대한 과민반응이 있는 경우 의사, 약사에게 미리 알려주세요.</li>
+            <li>칼슘보충제와 병용하기 전에는 반드시 전문가와 상의하세요.</li>
+            <li>강한 햇볕이나 자외선에 노출되지 않도록 주의하세요.</li>
+          </ul>
+          <a class="gmore" href="https://health.kr/drug-info/medication" target="_blank" rel="noopener noreferrer">복약정보 더 보기 (KPIC)</a>
+        </div>
+      </details>
+      <a class="drow" href="https://health.kr" target="_blank" rel="noopener noreferrer"><span>질병정보</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+    </div>
+    <p class="note">한국의약품정보센터(KPIC, health.kr) 사이트가 새 창에서 열립니다.</p>
+    <a class="linkcard" href="https://www.health.kr/" target="_blank" rel="noopener noreferrer">
+      <span class="lk"><b>더 많은 정보 보기</b><small>새 창에서 열립니다</small></span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>
+    </a>
+    <p class="note">링크가 열리지 않으면 주소를 복사해 인터넷 앱에서 여세요. www.health.kr</p>
+    <h3 class="sec">앱 안내</h3>
+    <div class="card info"><ul>
+      <li><b>홈</b> 시간대별로 약을 눌러 복용을 체크합니다.</li>
+      <li><b>약물</b> 약을 추가·삭제하고 처방전 사진을 보관합니다.</li>
+      <li><b>업데이트</b> 최근 7일 복용 기록을 확인합니다.</li>
+      <li>복용 기록과 약 목록은 이 앱을 연 계정과 이 기기에 저장됩니다. 처방전 사진은 이 기기에만 저장됩니다.</li>
+    </ul></div>
+  <p class="note">복용 기록용 앱입니다. 약의 종류, 양, 시간은 의사·약사의 안내를 따르세요. 기록은 이 앱을 연 계정에 저장됩니다.</p>
+  <p class="sync" id="sync"></p>
+  </div>
+</div>
+</div>
+
+<nav class="tabbar" aria-label="메뉴">
+  <button type="button" class="tab on" data-go="home" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg><span>홈</span></button>
+  <button type="button" class="tab" data-go="meds"><svg viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(-45 12 12)"><rect x="2" y="8.5" width="20" height="7" rx="3.5"/><path d="M12 8.5v7"/></g></svg><span>약물</span></button>
+  <button type="button" class="tab" data-go="log"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h10M7 17h6"/></svg><span>업데이트</span></button>
+  <button type="button" class="tab" data-go="more"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>더 많은 정보</span></button>
+</nav>
+
+<div class="veil" id="mvVeil">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mvTitle">
+    <h2 id="mvTitle">시간 이동</h2>
+    <div class="mvsub" id="mvSub"></div>
+    <div class="mvgrid" id="mvGrid"></div>
+    <div class="acts"><button id="mvCancel">취소</button></div>
+  </div>
+</div>
+
+<div class="veil" id="veil">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">약 추가</h2>
+    <label class="f" for="mName">약 이름</label>
+    <input class="in" id="mName" type="text" maxlength="40" autocomplete="off" placeholder="예: 혈압약">
+    <label class="f" for="mDose">용량·메모 (선택)</label>
+    <input class="in" id="mDose" type="text" maxlength="40" autocomplete="off" placeholder="예: 1정, 식후 30분">
+    <label class="f" id="slotLabel">복용 시간대 (여러 개 선택 가능)</label>
+    <div class="chips" id="slotChips" role="group" aria-labelledby="slotLabel"></div>
+    <div class="err" id="err" role="alert"></div>
+    <div class="acts">
+      <button id="cancel">취소</button>
+      <button class="go" id="save">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="veil" id="viewer">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="처방전 사진">
+    <img id="vImg" alt="처방전 사진" class="vimg">
+    <div class="vmeta" id="vMeta"></div>
+    <button type="button" class="readbtn" id="vRead" hidden>약 자동 등록</button>
+    <p class="readnote" id="vReadNote" hidden>사진이 Claude에 전송되어 약 이름과 복용 시간을 읽습니다. 등록 전에 내용을 확인할 수 있습니다.</p>
+    <div class="err" id="vErr" role="alert"></div>
+    <div class="acts">
+      <button id="vClose">닫기</button>
+      <button id="vDel" class="dng">삭제</button>
+    </div>
+  </div>
+</div>
+<div class="veil" id="review">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rvTitle">
+    <h2 id="rvTitle">읽은 약 확인</h2>
+    <p class="readnote" id="rvNote"></p>
+    <div id="rvList"></div>
+    <div class="err" id="rvErr" role="alert"></div>
+    <div class="acts">
+      <button id="rvCancel">취소</button>
+      <button class="go" id="rvAdd">선택한 약 등록</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  var LS="medcheck.v1";
+  var WD=["일","월","화","수","목","금","토"];
+  function uid(){return Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4);}
+  function key(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+  function mins(t){var p=t.split(":");return (+p[0])*60+(+p[1]);}
+
+  function seed(){
+    return {
+      slots:[
+        {id:"morning",name:"아침",time:"08:00"},
+        {id:"noon",name:"점심",time:"12:30"},
+        {id:"evening",name:"저녁",time:"18:30"},
+        {id:"bed",name:"자기 전",time:"22:30"}
+      ],
+      meds:[
+        {id:"ex1",name:"비타민 D",dose:"1정",slots:["morning"],example:true},
+        {id:"ex2",name:"소화제",dose:"식후",slots:["noon","evening"],example:true},
+        {id:"ex3",name:"수면 보조제",dose:"1정",slots:["bed"],example:true}
+      ],
+      log:{}
+    };
+  }
+
+  var state=null, sel={};
+  try{var raw=localStorage.getItem(LS); if(raw) state=JSON.parse(raw);}catch(e){}
+  if(!state||!state.slots||!state.meds) state=seed();
+  ensureState();
+
+  var today=new Date(); today.setHours(0,0,0,0);
+  var view=new Date(today);
+  var docRef=null, saving=false, dirty=false, armedDel=null, syncMsg="";
+
+  function $(id){return document.getElementById(id);}
+
+  /* ---------- persistence ---------- */
+  function persist(){
+    try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){}
+    dirty=true;
+    try{ flush(); }catch(e){ saving=false; syncMsg="계정 저장에 실패했습니다. 이 기기에는 저장되어 있습니다."; }
+  }
+  function flush(){
+    if(!docRef||saving||!dirty) return;
+    saving=true; dirty=false;
+    var snap=JSON.parse(JSON.stringify(state));
+    new Promise(function(res){ res(docRef.set({state:snap,updated:Date.now()})); })
+      .then(function(){syncMsg="저장됨";})
+      .catch(function(){syncMsg="계정 저장에 실패했습니다. 이 기기에는 저장되어 있습니다."; })
+      .then(function(){saving=false; $("sync").textContent=syncMsg; if(dirty) flush();});
+  }
+  function initRemote(){
+    if(!window.claude||!window.claude.use) return;
+    Promise.all([window.claude.use("db"),window.claude.use("user")]).then(function(r){
+      var db=r[0],user=r[1];
+      if(!db||!user) return;
+      return Promise.resolve(user.id()).then(function(id){
+        docRef=db.collection("data/users/"+id).doc("state");
+        return docRef.get();
+      }).then(function(snap){
+        var ex=typeof snap.exists==="function"?snap.exists():snap.exists;
+        if(ex){
+          var d=typeof snap.data==="function"?snap.data():snap.data;
+          if(d&&d.state&&d.state.slots&&d.state.meds){
+            state=d.state; ensureState();
+            try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){}
+            render();
+          }
+        } else { dirty=true; flush(); }
+      });
+    }).catch(function(){});
+  }
+
+  /* ---------- helpers ---------- */
+  function ensureState(){
+    if(!state.log) state.log={};
+    if(!state.skips) state.skips={};
+  }
+  function sortedSlots(){return state.slots.slice().sort(function(a,b){return mins(a.time)-mins(b.time);});}
+  function dayLog(k){return state.log[k]||{};}
+  function entryKey(m,s){return m+"_"+s;}
+  function itemsFor(slotId){return state.meds.filter(function(m){return m.slots.indexOf(slotId)>-1;});}
+  function fmtClock(ts){var d=new Date(ts);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+
+  function toggle(medId,slotId){
+    var k=key(view), ek=entryKey(medId,slotId);
+    if(!state.log[k]) state.log[k]={};
+    if(state.log[k][ek]) delete state.log[k][ek]; else { state.log[k][ek]=Date.now(); if(state.skips[k]) delete state.skips[k][ek]; }
+    persist(); render();
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    var k=key(view), isToday=k===key(today), isFuture=view>today;
+    var log=dayLog(k), now=new Date(), nowMin=now.getHours()*60+now.getMinutes();
+    var sk=state.skips[k]||{};
+    var total=0, done=0, html="", nowSlotMarked=false;
+    var slots=sortedSlots();
+
+    slots.forEach(function(s){
+      var items=itemsFor(s.id), c=0, sc=0;
+      items.forEach(function(m){var e=entryKey(m.id,s.id); total++; if(log[e]){done++;c++;} else if(sk[e]) sc++;});
+      var status="", cls="";
+      if(items.length){
+        if(c===items.length){status="완료"; cls="done";}
+        else if(c+sc===items.length){status="건너뜀"; cls="skip";}
+        else if(isToday){
+          var sm=mins(s.time);
+          if(nowMin>=sm+60){status="시간 지남"; cls="late";}
+          else if(nowMin>=sm-30){status="지금"; cls="now";}
+          else status="예정";
+        } else if(!isFuture){status="미복용 "+(items.length-c-sc)+"개"; cls="late";}
+      }
+      var isNow=isToday&&cls==="now"&&!nowSlotMarked; if(isNow) nowSlotMarked=true;
+      html+='<section class="slot'+(isNow?' now':'')+'"><div class="slot-h"><h2>'+esc(s.name)+'</h2>'
+        +(status?'<span class="pill '+cls+'">'+status+'</span>':'')
+        +'<input type="time" value="'+esc(s.time)+'" data-slot="'+esc(s.id)+'" aria-label="'+esc(s.name)+' 복용 시각"></div>';
+      if(!items.length) html+='<div class="empty">이 시간대에 등록된 약이 없습니다.</div>';
+      items.forEach(function(m){
+        var e2=entryKey(m.id,s.id), t=log[e2], skp=!t&&sk[e2];
+        html+='<button class="row'+(skp?' skip':'')+'" aria-pressed="'+(t?'true':'false')+'" data-med="'+esc(m.id)+'" data-s="'+esc(s.id)+'"'+(isFuture?' disabled':'')+'>'
+          +'<span class="box" aria-hidden="true">'+(skp?'✕':'✓')+'</span>'
+          +'<span class="nm"><b>'+esc(m.name)+(m.example?'<em class="tag">예시</em>':'')+'</b>'
+          +'<span>'+(t?fmtClock(t)+' 복용':(skp?'건너뜀':esc(m.dose||'복용 전')))+'</span></span></button>';
+      });
+      html+='</section>';
+    });
+    $("slots").innerHTML=html;
+
+    // header
+    $("title").innerHTML=(view.getMonth()+1)+"월 "+view.getDate()+"일 "+WD[view.getDay()]+"요일"
+      +"<small>"+(isToday?"오늘":(isFuture?"앞으로의 날":"지난 기록"))+"</small>";
+    $("next").disabled=key(view)>=key(today);
+    $("goToday").hidden=isToday;
+    $("progText").textContent=done+" / "+total+"개 복용";
+    $("progSub").textContent=total?Math.round(done/total*100)+"%":"";
+    $("barFill").style.width=(total?done/total*100:0)+"%";
+    $("bar").setAttribute("aria-valuenow",total?Math.round(done/total*100):0);
+
+    // med list
+    var ml="";
+    if(!state.meds.length) ml='<div class="empty">등록된 약이 없습니다. 아래 버튼으로 추가하세요.</div>';
+    state.meds.forEach(function(m,i){
+      var names=state.slots.filter(function(s){return m.slots.indexOf(s.id)>-1;}).map(function(s){return s.name;}).join(", ");
+      var arm=armedDel===m.id;
+      ml+='<div class="mrow"><input type="checkbox" class="mck" data-sel="'+esc(m.id)+'" aria-label="'+esc(m.name)+' 선택"'+(sel[m.id]?' checked':'')+'>'
+        +'<div class="nm"><b>'+esc(m.name)+(m.example?'<em class="tag">예시</em>':'')+'</b><span>'+esc(names||"시간대 없음")+(m.dose?" · "+esc(m.dose):"")+'</span></div>'
+        +'<button type="button" class="mvb" data-move="'+esc(m.id)+'" aria-label="'+esc(m.name)+' 시간 이동"><svg viewBox="0 0 24 24"><path d="M12 3v18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12h18M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>이동</button>'
+        +'<button class="del'+(arm?' arm':'')+'" data-del="'+esc(m.id)+'">'+(arm?"한 번 더 눌러 삭제":"삭제")+'</button></div>';
+    });
+    $("medList").innerHTML=ml;
+    $("sync").textContent=syncMsg;
+    renderLog();
+  }
+
+  /* ---------- events ---------- */
+  $("slots").addEventListener("click",function(e){
+    var b=e.target.closest(".row"); if(b&&!b.disabled) toggle(b.getAttribute("data-med"),b.getAttribute("data-s"));
+  });
+  $("slots").addEventListener("change",function(e){
+    var i=e.target; if(i.matches("input[type=time]")&&i.value){
+      state.slots.forEach(function(s){if(s.id===i.getAttribute("data-slot")) s.time=i.value;});
+      persist(); render();
+    }
+  });
+  $("medList").addEventListener("change",function(e){
+    var c=e.target.closest("[data-sel]"); if(!c) return;
+    var id=c.getAttribute("data-sel"); if(c.checked) sel[id]=true; else delete sel[id];
+  });
+  var mvTargets=[];
+  function closeMv(){$("mvVeil").classList.remove("open");}
+  $("medList").addEventListener("click",function(e){
+    var b=e.target.closest("[data-move]"); if(!b) return;
+    var id=b.getAttribute("data-move"); sel[id]=true;
+    mvTargets=state.meds.filter(function(m){return sel[m.id];});
+    var cur=mvTargets.length===1?mvTargets[0].slots:[];
+    $("mvSub").textContent=mvTargets.length===1?mvTargets[0].name+" — 이동할 시간을 선택하세요":"선택한 "+mvTargets.length+"개 — 이동할 시간을 선택하세요";
+    $("mvGrid").innerHTML=sortedSlots().map(function(s){return '<button type="button" data-moveto="'+esc(s.id)+'"'+(cur.indexOf(s.id)>-1?' class="cur"':'')+'>'+esc(s.name)+'<small>'+esc(s.time)+'</small></button>';}).join("");
+    $("mvVeil").classList.add("open");
+  });
+  $("mvGrid").addEventListener("click",function(e){
+    var b=e.target.closest("[data-moveto]"); if(!b) return;
+    var to=b.getAttribute("data-moveto");
+    mvTargets.forEach(function(m){m.slots=[to];});
+    sel={}; mvTargets=[]; persist(); closeMv(); render();
+  });
+  $("mvCancel").addEventListener("click",function(){sel={}; mvTargets=[]; closeMv(); render();});
+  $("mvVeil").addEventListener("click",function(e){if(e.target===$("mvVeil")){sel={}; mvTargets=[]; closeMv(); render();}});
+  $("medList").addEventListener("click",function(e){
+    var b=e.target.closest("[data-del]"); if(!b) return;
+    var id=b.getAttribute("data-del");
+    if(armedDel===id){
+      state.meds=state.meds.filter(function(m){return m.id!==id;}); delete sel[id]; armedDel=null; persist();
+    } else {
+      armedDel=id;
+      setTimeout(function(){ if(armedDel===id){armedDel=null; render();} },3000);
+    }
+    render();
+  });
+  $("prev").addEventListener("click",function(){view.setDate(view.getDate()-1); render();});
+  $("next").addEventListener("click",function(){ if(key(view)<key(today)){view.setDate(view.getDate()+1); render();}});
+  $("goToday").addEventListener("click",function(){view=new Date(today); render();});
+
+  // add sheet
+  var pick={};
+  function openSheet(){
+    pick={}; $("mName").value=""; $("mDose").value=""; $("err").textContent="";
+    var ss=sortedSlots(), n=new Date(), nm=n.getHours()*60+n.getMinutes();
+    var next=ss.filter(function(s){return mins(s.time)>=nm;})[0]||ss[0];
+    if(next) pick[next.id]=true;
+    $("slotChips").innerHTML=ss.map(function(s){
+      return '<button type="button" class="chip" aria-pressed="'+(pick[s.id]?'true':'false')+'" data-chip="'+esc(s.id)+'">'+esc(s.name)+'</button>';
+    }).join("");
+    $("veil").classList.add("open"); setTimeout(function(){$("mName").focus();},50);
+  }
+  function closeSheet(){$("veil").classList.remove("open");}
+  Array.prototype.forEach.call(document.querySelectorAll(".addbtn"),function(b){b.addEventListener("click",openSheet);});
+  $("cancel").addEventListener("click",closeSheet);
+  $("veil").addEventListener("click",function(e){if(e.target===$("veil")) closeSheet();});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape") closeSheet();});
+  $("slotChips").addEventListener("click",function(e){
+    var c=e.target.closest("[data-chip]"); if(!c) return;
+    var id=c.getAttribute("data-chip"); pick[id]=!pick[id];
+    c.setAttribute("aria-pressed",pick[id]?"true":"false");
+  });
+  ["mName","mDose"].forEach(function(id){
+    $(id).addEventListener("keydown",function(e){ if(e.key==="Enter"){e.preventDefault(); $("save").click();} });
+  });
+  $("save").addEventListener("click",function(){
+    var name=$("mName").value.trim();
+    var chosen=Object.keys(pick).filter(function(k){return pick[k];});
+    if(!name){$("err").textContent="약 이름을 입력하세요."; $("mName").focus(); $("err").scrollIntoView({block:"nearest"}); return;}
+    if(!chosen.length){$("err").textContent="복용 시간대를 하나 이상 선택하세요."; $("err").scrollIntoView({block:"nearest"}); return;}
+    state.meds.push({id:uid(),name:name,dose:$("mDose").value.trim(),slots:chosen});
+    persist(); closeSheet(); render();
+  });
+
+  // refresh status pills as time passes
+  setInterval(function(){ if(!$("veil").classList.contains("open")&&key(view)===key(today)) render(); },60000);
+
+  /* ---------- 처방전 사진 ---------- */
+  var RX="medcheck.rx.v1", photos=[], openId=null, armedPhoto=false;
+  try{photos=JSON.parse(localStorage.getItem(RX)||"[]");}catch(e){photos=[];}
+  var storageOK=false;
+  try{localStorage.setItem("medcheck.t","1");localStorage.removeItem("medcheck.t");storageOK=true;}catch(e){storageOK=false;}
+  function savePhotos(){try{localStorage.setItem(RX,JSON.stringify(photos));return true;}catch(e){return false;}}
+  function shrink(file){
+    return new Promise(function(res,rej){
+      var url=URL.createObjectURL(file), im=new Image();
+      im.onload=function(){
+        var sc=Math.min(1,1400/Math.max(im.width,im.height)), c=document.createElement("canvas");
+        c.width=Math.round(im.width*sc); c.height=Math.round(im.height*sc);
+        c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+        URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg",0.72));
+      };
+      im.onerror=function(){URL.revokeObjectURL(url); rej(new Error("img"));};
+      im.src=url;
+    });
+  }
+  function dayLabel(ts){var d=new Date(ts);return (d.getMonth()+1)+"/"+d.getDate();}
+  function renderPhotos(){
+    $("rxGrid").innerHTML=photos.map(function(p){
+      return '<button type="button" class="thumb" data-photo="'+esc(p.id)+'" aria-label="'+dayLabel(p.date)+' 처방전 크게 보기"><img src="'+p.img+'" alt=""><span>'+dayLabel(p.date)+'</span></button>';
+    }).join("");
+  }
+  function addFiles(files){
+    var list=Array.prototype.slice.call(files||[]).filter(function(f){return /^image\//.test(f.type)||!f.type;});
+    $("rxErr").textContent="";
+    if(!list.length) return;
+    var chain=Promise.resolve();
+    list.forEach(function(f){
+      chain=chain.then(function(){
+        if(photos.length>=12){ $("rxErr").textContent="사진은 최대 12장까지 보관할 수 있습니다. 오래된 사진을 삭제하세요."; return; }
+        return shrink(f).then(function(img){
+          var item={id:uid(),date:Date.now(),img:img};
+          photos.unshift(item);
+          if(!savePhotos()){
+            if(storageOK){ photos.shift(); $("rxErr").textContent="저장 공간이 부족합니다. 오래된 사진을 삭제하고 다시 시도하세요."; }
+            else { $("rxErr").textContent="이 화면에서는 사진을 저장할 수 없어 화면을 닫으면 사라집니다."; }
+          }
+        }).catch(function(){ $("rxErr").textContent="사진을 읽지 못했습니다. 다른 사진으로 다시 시도하세요."; });
+      });
+    });
+    chain.then(renderPhotos);
+  }
+  ["rxCamIn","rxAlbIn"].forEach(function(id){
+    $(id).addEventListener("change",function(e){ addFiles(e.target.files); e.target.value=""; });
+  });
+  $("rxGrid").addEventListener("click",function(e){
+    var b=e.target.closest("[data-photo]"); if(!b) return;
+    var p=photos.filter(function(x){return x.id===b.getAttribute("data-photo");})[0]; if(!p) return;
+    openId=p.id; armedPhoto=false; $("vDel").textContent="삭제"; $("vDel").classList.remove("arm");
+    $("vImg").src=p.img; $("vMeta").textContent=dayLabel(p.date)+" 등록";
+    $("viewer").classList.add("open");
+  });
+  function closeViewer(){$("viewer").classList.remove("open"); openId=null;}
+  $("vClose").addEventListener("click",closeViewer);
+  $("viewer").addEventListener("click",function(e){if(e.target===$("viewer")) closeViewer();});
+  $("vDel").addEventListener("click",function(){
+    if(!armedPhoto){ armedPhoto=true; $("vDel").textContent="한 번 더 눌러 삭제"; $("vDel").classList.add("arm"); return; }
+    photos=photos.filter(function(x){return x.id!==openId;}); savePhotos(); closeViewer(); renderPhotos();
+  });
+  document.addEventListener("keydown",function(e){if(e.key==="Escape") closeViewer();});
+
+  /* ---------- 처방전 자동 읽기 (Claude) ---------- */
+  var ai=null, found=[], reading=false;
+  if(window.claude&&window.claude.use){
+    window.claude.use("sample").then(function(s){
+      if(!s) return;
+      return Promise.resolve(s.limits?s.limits():{images:true}).then(function(l){
+        if(l&&l.images){ ai=s; $("vRead").hidden=false; $("vReadNote").hidden=false; }
+      });
+    }).catch(function(){});
+  }
+  function dataToBlob(d){
+    var p=d.split(","), m=/:(.*?);/.exec(p[0])[1], b=atob(p[1]), u=new Uint8Array(b.length);
+    for(var i=0;i<b.length;i++) u[i]=b.charCodeAt(i);
+    return new Blob([u],{type:m});
+  }
+  var PROMPT='이 이미지는 병원 처방전, 약봉투 또는 약 설명서 사진입니다. 사진에 실제로 보이는 약 정보만 읽어 JSON으로만 답하세요. 보이지 않는 내용은 추측하지 마세요.\n'
+    +'형식: {"meds":[{"name":"약 이름","dose":"1회 용량과 복용법을 짧게 (예: 1정, 식후 30분)","times":["morning","noon","evening","bed"]}],"note":"읽기 어려운 부분이 있으면 한 줄, 없으면 빈 문자열"}\n'
+    +'times에는 morning, noon, evening, bed 중에서만 고르세요. 1일 1회는 ["morning"], 2회는 ["morning","evening"], 3회는 ["morning","noon","evening"], 4회는 ["morning","noon","evening","bed"], "취침 전"은 ["bed"]입니다. 복용 횟수를 알 수 없으면 times를 빈 배열로 두세요.\n'
+    +'처방전이나 약 정보가 아니면 meds를 빈 배열로 하고 note에 이유를 쓰세요.';
+  function parseResult(r){
+    if(r&&typeof r==="object"&&r.meds) return r;
+    if(r&&typeof r==="object"&&typeof r.text==="string") r=r.text;
+    if(typeof r==="string"){ var m=r.match(/\{[\s\S]*\}/); if(m) return JSON.parse(m[0]); }
+    throw new Error("parse");
+  }
+  $("vRead").addEventListener("click",function(){
+    if(!ai||reading) return;
+    var p=photos.filter(function(x){return x.id===openId;})[0]; if(!p) return;
+    reading=true; $("vErr").textContent=""; $("vRead").disabled=true; $("vRead").textContent="읽는 중... (10~30초)";
+    Promise.resolve(ai.json(PROMPT,{images:[dataToBlob(p.img)],modelTier:"default",cache:false}))
+      .then(parseResult)
+      .then(function(res){
+        var valid={morning:1,noon:1,evening:1,bed:1};
+        var have=state.meds.map(function(m){return m.name.replace(/\s/g,"").toLowerCase();});
+        found=(res.meds||[]).filter(function(m){return m&&m.name;}).map(function(m){
+          var s={}; (m.times||[]).forEach(function(t){ if(valid[t]) s[t]=true; });
+          var dupe=have.indexOf(String(m.name).replace(/\s/g,"").toLowerCase())>-1;
+          return {name:String(m.name).slice(0,40),dose:String(m.dose||"").slice(0,40),slots:s,on:!dupe,dupe:dupe};
+        });
+        if(!found.length){ $("vErr").textContent=(res.note?res.note+" ":"")+"읽을 수 있는 약이 없습니다. 글자가 잘 보이게 다시 찍어 보세요."; return; }
+        openReview(res.note||"");
+      })
+      .catch(function(e){
+        var c=e&&e.code;
+        $("vErr").textContent= c==="not_granted" ? "이 기능을 사용할 수 없습니다. 권한을 확인하세요."
+          : c==="rate_limited" ? "요청이 너무 많습니다. 잠시 후 다시 시도하세요."
+          : "처방전을 읽지 못했습니다. 사진이 선명한지 확인하고 다시 시도하세요.";
+      })
+      .then(function(){ reading=false; $("vRead").disabled=false; $("vRead").textContent="약 자동 등록"; });
+  });
+  function openReview(note){
+    $("rvNote").textContent=(note?note+" ":"")+"읽은 내용이 틀릴 수 있습니다. 이름, 용량, 시간대를 꼭 확인하고 고쳐 주세요.";
+    $("rvErr").textContent="";
+    var ss=sortedSlots();
+    $("rvList").innerHTML=found.map(function(f,i){
+      return '<div class="rvitem'+(f.on?'':' off')+'" data-i="'+i+'">'
+        +'<div class="rvtop"><input type="checkbox" data-on aria-label="등록"'+(f.on?' checked':'')+'>'
+        +'<input class="in" data-name maxlength="40" aria-label="약 이름" value="'+esc(f.name)+'"></div>'
+        +'<input class="in" data-dose maxlength="40" aria-label="용량·메모" placeholder="용량·메모" value="'+esc(f.dose)+'">'
+        +(f.dupe?'<div class="dupe">이미 같은 이름의 약이 있어 선택을 꺼 두었습니다.</div>':'')
+        +'<div class="chips">'+ss.map(function(s){return '<button type="button" class="chip" data-rs="'+esc(s.id)+'" aria-pressed="'+(f.slots[s.id]?'true':'false')+'">'+esc(s.name)+'</button>';}).join("")+'</div></div>';
+    }).join("");
+    closeViewer(); $("review").classList.add("open");
+  }
+  function closeReview(){$("review").classList.remove("open");}
+  $("rvCancel").addEventListener("click",closeReview);
+  $("review").addEventListener("click",function(e){if(e.target===$("review")) closeReview();});
+  $("rvList").addEventListener("input",function(e){
+    var it=e.target.closest(".rvitem"); if(!it) return; var f=found[+it.getAttribute("data-i")];
+    if(e.target.hasAttribute("data-name")) f.name=e.target.value;
+    if(e.target.hasAttribute("data-dose")) f.dose=e.target.value;
+  });
+  $("rvList").addEventListener("change",function(e){
+    var it=e.target.closest(".rvitem"); if(!it||!e.target.hasAttribute("data-on")) return;
+    var f=found[+it.getAttribute("data-i")]; f.on=e.target.checked; it.classList.toggle("off",!f.on);
+  });
+  $("rvList").addEventListener("click",function(e){
+    var c=e.target.closest("[data-rs]"); if(!c) return;
+    var f=found[+c.closest(".rvitem").getAttribute("data-i")], id=c.getAttribute("data-rs");
+    f.slots[id]=!f.slots[id]; c.setAttribute("aria-pressed",f.slots[id]?"true":"false");
+  });
+  $("rvAdd").addEventListener("click",function(){
+    var sel=found.filter(function(f){return f.on;});
+    if(!sel.length){ $("rvErr").textContent="등록할 약을 하나 이상 선택하세요."; return; }
+    for(var i=0;i<sel.length;i++){
+      var f=sel[i];
+      if(!f.name.trim()){ $("rvErr").textContent="이름이 비어 있는 약이 있습니다."; return; }
+      if(!Object.keys(f.slots).some(function(k){return f.slots[k];})){ $("rvErr").textContent="'"+f.name.trim()+"'의 복용 시간대를 선택하세요."; return; }
+    }
+    sel.forEach(function(f){
+      state.meds.push({id:uid(),name:f.name.trim(),dose:f.dose.trim(),slots:Object.keys(f.slots).filter(function(k){return f.slots[k];})});
+    });
+    persist(); closeReview(); render();
+    $("rxErr").textContent=sel.length+"개 약을 등록했습니다. 위의 '내 약 목록'에서 확인하세요.";
+  });
+  document.addEventListener("keydown",function(e){if(e.key==="Escape") closeReview();});
+
+  /* ---------- 하단 탭 ---------- */
+  function renderLog(){
+    var el=$("logList"); if(!el) return;
+    var pairs=[];
+    state.meds.forEach(function(m){m.slots.forEach(function(s){
+      if(state.slots.some(function(x){return x.id===s;})) pairs.push(entryKey(m.id,s));
+    });});
+    var out="";
+    for(var i=0;i<7;i++){
+      var d=new Date(today); d.setDate(d.getDate()-i);
+      var k=key(d), lg=dayLog(k);
+      var done=pairs.filter(function(p){return lg[p];}).length, tot=pairs.length;
+      var pct=tot?Math.round(done/tot*100):0;
+      out+='<button type="button" class="lrow" data-day="'+k+'"><span class="ld">'+(d.getMonth()+1)+'/'+d.getDate()+' ('+WD[d.getDay()]+')'+(i===0?' 오늘':'')+'</span>'
+        +'<span class="lbar"><i style="width:'+pct+'%"></i></span><span class="lc">'+done+'/'+tot+'</span></button>';
+    }
+    el.innerHTML=out;
+  }
+  function setTab(t){
+    document.body.setAttribute("data-active",t);
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){
+      var on=b.getAttribute("data-go")===t;
+      b.classList.toggle("on",on);
+      if(on) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current");
+    });
+    var sc=document.querySelector(".scroll"); if(sc) sc.scrollTop=0;
+    try{window.scrollTo(0,0);}catch(e){}
+    renderLog();
+  }
+  document.querySelector(".tabbar").addEventListener("click",function(e){
+    var b=e.target.closest("[data-go]"); if(b) setTab(b.getAttribute("data-go"));
+  });
+  $("logList").addEventListener("click",function(e){
+    var b=e.target.closest("[data-day]"); if(!b) return;
+    var p=b.getAttribute("data-day").split("-");
+    view=new Date(+p[0],+p[1]-1,+p[2]); render(); setTab("home");
+  });
+
+
+  renderPhotos();
+  render();
+  initRemote();
+})();
+
+</script>
+</body>
+</html>
